@@ -5,88 +5,98 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Wartungsportal Generatoren</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 40px;
-      background: #f4f6f9;
-    }
-    h1 {
-      color: #333;
-    }
-    button {
-      display: block;
-      width: 260px;
-      margin: 15px auto;
-      padding: 15px;
-      font-size: 18px;
-      border-radius: 12px;
-      border: none;
-      background: #4a90e2;
-      color: white;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-    button:hover {
-      background: #357ABD;
-    }
-    #form {
-      display: none;
-      margin-top: 25px;
-      padding: 20px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    input, textarea {
-      width: 90%;
-      margin: 10px 0;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 16px;
-    }
-    textarea {
-      resize: vertical;
-    }
+    body { font-family: Arial; text-align: center; background: #f4f6f9; margin: 40px; }
+    button { display: block; margin: 10px auto; padding: 12px; width: 250px; border-radius: 10px; border: none; background: #4a90e2; color: white; font-size: 16px; cursor: pointer; }
+    button:hover { background: #357ABD; }
+    input, textarea, select { width: 90%; margin: 8px 0; padding: 8px; }
+    .hidden { display: none; }
+    #list { background: white; padding: 15px; border-radius: 12px; margin-top: 20px; }
+    .entry { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; }
+    .status { width: 15px; height: 15px; display: inline-block; margin-left: 8px; border-radius: 3px; }
   </style>
 </head>
 <body>
-  <h1>📌 Schulportal</h1>
-  
-  <!-- Buttons -->
-  <button onclick="window.open('https://drive.google.com/file/d/1Pqe6DCpG8WYtwVL_SeYGbe1bWGzqlgUy/view?usp=drive_link', '_blank')">📄 Wartungsanleitung</button>
-  <button onclick="window.open('https://docs.google.com/spreadsheets/d/1rO-32MAJq4Ox2CtjWEUjXUeA9MBWpLY85YMQKu3L_ec/edit?gid=0#gid=0/edit', '_blank')">📊 Protokoll</button>
-  <button onclick="document.getElementById('form').style.display='block'">⚠ Zwischenfall erfassen</button>
-  <button onclick="document.getElementById('form').style.display='none'">✅ Zwischenfall beenden</button>
+  <h1>⚡ Wartungsportal Generatoren ⚡</h1>
 
-  <!-- Zwischenfall-Formular -->
-  <div id="form">
-    <h2>⚠ Zwischenfall erfassen</h2>
-    <input type="text" id="art" placeholder="Art des Zwischenfalls">
-    <textarea id="beschreibung" rows="5" placeholder="Beschreibung"></textarea><br>
-    <button onclick="senden()">📤 Absenden</button>
+  <button onclick="window.open('https://drive.google.com/file/d/1Pqe6DCpG8WYtwVL_SeYGbe1bWGzqlgUy/view?usp=drive_link','_blank')">📄 Wartungsanleitung</button>
+  <button onclick="window.open('https://docs.google.com/spreadsheets/d/1u8ANnoSeVywqraNGXkbxUezFOaSEBEV0T8scEwqnV2o/edit?gid=0#gid=0/edit','_blank')">📊 Protokoll</button>
+  <button onclick="toggle('form')">⚠ Zwischenfall erfassen</button>
+  <button onclick="loadIncidents()">📋 Zwischenfälle</button>
+  <button onclick="toggle('closeForm')">✅ Zwischenfall schließen</button>
+
+  <!-- Erfassen -->
+  <div id="form" class="hidden">
+    <h3>Zwischenfall erfassen</h3>
+    <input id="inventar" placeholder="Inventar Nr.">
+    <input id="art" placeholder="Art des Zwischenfalls">
+    <textarea id="beschreibung" placeholder="Beschreibung"></textarea>
+    <button onclick="addIncident()">Absenden</button>
   </div>
 
-  <script>
-    function senden() {
-      const art = document.getElementById('art').value.trim();
-      const beschreibung = document.getElementById('beschreibung').value.trim();
+  <!-- Schließen -->
+  <div id="closeForm" class="hidden">
+    <h3>Zwischenfall schließen</h3>
+    <input id="closeInventar" placeholder="Inventar Nr.">
+    <input id="closeArt" placeholder="Art des Zwischenfalls">
+    <textarea id="closeBeschreibung" placeholder="Abschluss-Beschreibung"></textarea>
+    <input id="visum" placeholder="Visum (Name)">
+    <button onclick="closeIncident()">Schließen</button>
+  </div>
 
-      if (!art || !beschreibung) {
-        alert("Bitte alle Felder ausfüllen!");
-        return;
-      }
+  <!-- Liste -->
+  <div id="list" class="hidden">
+    <h3>Zwischenfälle</h3>
+    <div id="entries"></div>
+  </div>
 
-      // Statt einer Datenbank -> Dummy-Ausgabe
-      alert("✅ Zwischenfall gespeichert:\n\nArt: " + art + "\nBeschreibung: " + beschreibung);
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbwXD23MjAOOEpNocTeSvmvoosoBmiAt8TMzbOr-R-E1nkVA7wiMcgzszWi7yIjJvCWWmg/exec"; // Google Script
 
-      // Formular leeren
-      document.getElementById('art').value = "";
-      document.getElementById('beschreibung').value = "";
-      document.getElementById('form').style.display = 'none';
-    }
-  </script>
+function toggle(id) {
+  document.getElementById('form').classList.add('hidden');
+  document.getElementById('closeForm').classList.add('hidden');
+  document.getElementById('list').classList.add('hidden');
+  if (id) document.getElementById(id).classList.remove('hidden');
+}
+
+async function addIncident() {
+  const data = {
+    inventar: document.getElementById('inventar').value,
+    art: document.getElementById('art').value,
+    beschreibung: document.getElementById('beschreibung').value
+  };
+  await fetch(API_URL, {method:"POST", body:JSON.stringify(data)});
+  alert("✅ Zwischenfall erfasst!");
+  toggle('');
+}
+
+async function loadIncidents() {
+  toggle('list');
+  const res = await fetch(API_URL);
+  const data = await res.json();
+  const container = document.getElementById('entries');
+  container.innerHTML = "";
+  data.forEach(inc => {
+    let div = document.createElement("div");
+    div.className = "entry";
+    let statusBox = `<span class="status" style="background:${inc.Status==="geschlossen"?"green":"red"}"></span>`;
+    let visum = inc.Status==="geschlossen" ? ` | Visum: ${inc.Visum} <button onclick="alert('${inc['Abschluss-Beschreibung']}')">Details</button>` : "";
+    div.innerHTML = `${inc.Art} | Inventar: ${inc.Inventar} ${visum} ${statusBox}`;
+    container.appendChild(div);
+  });
+}
+
+async function closeIncident() {
+  const data = {
+    inventar: document.getElementById('closeInventar').value,
+    art: document.getElementById('closeArt').value,
+    closeBeschreibung: document.getElementById('closeBeschreibung').value,
+    visum: document.getElementById('visum').value
+  };
+  await fetch(API_URL + "?action=closeIncident", {method:"POST", body:JSON.stringify(data)});
+  alert("✅ Zwischenfall geschlossen!");
+  toggle('');
+}
+</script>
 </body>
 </html>
-
