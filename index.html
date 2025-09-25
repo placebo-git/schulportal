@@ -32,15 +32,110 @@
     <button onclick="addIncident()">Absenden</button>
   </div>
 
-  <!-- Schließen -->
-  <div id="closeForm" class="hidden">
-    <h3>Zwischenfall schließen</h3>
-    <input id="closeInventar" placeholder="Inventar Nr.">
-    <input id="closeArt" placeholder="Art des Zwischenfalls">
+<!-- Zwischenfall schließen -->
+<div id="closeForm" class="hidden">
+  <h3>Zwischenfall schließen</h3>
+  
+  <!-- Auswahl -->
+  <select id="incidentSelect" onchange="showCloseFields()"></select>
+  
+  <!-- Felder erst sichtbar nach Auswahl -->
+  <div id="closeFields" class="hidden">
     <textarea id="closeBeschreibung" placeholder="Abschluss-Beschreibung"></textarea>
     <input id="visum" placeholder="Visum (Name)">
     <button onclick="closeIncident()">Schließen</button>
   </div>
+</div>
+
+<script>
+async function toggle(id) {
+  document.getElementById('form').classList.add('hidden');
+  document.getElementById('closeForm').classList.add('hidden');
+  document.getElementById('list').classList.add('hidden');
+  if (id) document.getElementById(id).classList.remove('hidden');
+
+  // Wenn man auf "Zwischenfall schließen" klickt → offene Fälle laden
+  if (id === 'closeForm') {
+    await loadOpenIncidents();
+  }
+}
+
+// offene Zwischenfälle ins Dropdown laden
+async function loadOpenIncidents() {
+  const select = document.getElementById('incidentSelect');
+  const closeFields = document.getElementById('closeFields');
+  closeFields.classList.add('hidden'); // Felder erstmal ausblenden
+  select.innerHTML = "";
+
+  try {
+    const res = await fetch(API_URL);
+    const data = await res.json();
+    const offene = data.filter(inc => inc.Status === "offen");
+
+    if (!offene.length) {
+      let opt = document.createElement("option");
+      opt.textContent = "Keine offenen Zwischenfälle";
+      opt.value = "";
+      select.appendChild(opt);
+      return;
+    }
+
+    let opt0 = document.createElement("option");
+    opt0.textContent = "-- Zwischenfall auswählen --";
+    opt0.value = "";
+    select.appendChild(opt0);
+
+    offene.forEach((inc, i) => {
+      let opt = document.createElement("option");
+      opt.value = JSON.stringify({inventar: inc.Inventar, art: inc.Art});
+      opt.textContent = inc.Art + " (Inventar " + inc.Inventar + ")";
+      select.appendChild(opt);
+    });
+  } catch (err) {
+    console.error("Fehler beim Laden offener Zwischenfälle:", err);
+  }
+}
+
+// Felder einblenden, sobald etwas gewählt ist
+function showCloseFields() {
+  const val = document.getElementById('incidentSelect').value;
+  if (val) {
+    document.getElementById('closeFields').classList.remove('hidden');
+  } else {
+    document.getElementById('closeFields').classList.add('hidden');
+  }
+}
+
+// Zwischenfall schließen
+async function closeIncident() {
+  const val = document.getElementById('incidentSelect').value;
+  if (!val) {
+    alert("Bitte einen Zwischenfall auswählen.");
+    return;
+  }
+
+  const selected = JSON.parse(val);
+  const besch = document.getElementById('closeBeschreibung').value.trim();
+  const visum = document.getElementById('visum').value.trim();
+
+  if (!besch || !visum) {
+    alert("Bitte alle Felder ausfüllen!");
+    return;
+  }
+
+  const data = {
+    inventar: selected.inventar,
+    art: selected.art,
+    closeBeschreibung: besch,
+    visum: visum
+  };
+
+  await fetch(API_URL + "?action=closeIncident", {method:"POST", body:JSON.stringify(data)});
+  alert("Zwischenfall geschlossen");
+  toggle('');
+}
+</script>
+
 
   <!-- Liste -->
   <div id="list" class="hidden">
@@ -103,4 +198,5 @@ async function closeIncident() {
 </script>
 </body>
 </html>
+
 
